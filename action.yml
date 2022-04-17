@@ -40,7 +40,7 @@ runs:
   using: composite
   steps:
     - name: Download jacoco build
-      uses: actions/download-artifact@v2
+      uses: actions/download-artifact@v3
       with:
         name: jacoco-build
         path: ${{ inputs.working-directory }}/${{ inputs.gradle-project-path }}/build/jacoco/
