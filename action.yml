@@ -56,7 +56,7 @@ runs:
         properties: ${{ inputs.gradle-properties }}
 
     - name: Upload coverage report
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v3
       if: "!cancelled()"
       with:
         name: ${{ inputs.report-name }}
