@@ -96,16 +96,17 @@ runs:
         path: ${{ steps.metadata.outputs.artifact-path }}/build/reports/jacoco/test/jacocoTestReport.xml
 
     - name: Find jacocoTestReport.xml
-      uses: jeertmans/filesfinder@v0.4.5
-      id: ff
+      uses: tj-actions/glob@v17
+      id: glob
+      if: "!cancelled() && inputs.enable-coverage-comment == 'true' && github.actor != 'dependabot[bot]' && github.event_name == 'pull_request'"
       with:
-        args: -g ${{ steps.metadata.outputs.artifact-path }}/build/reports/jacoco/test/jacocoTestReport.xml
+        files: ${{ steps.metadata.outputs.artifact-path }}/build/reports/jacoco/test/jacocoTestReport.xml
 
     - name: Create annotations
       uses: equisoft-actions/jacoco-report@v1.4
       if: "!cancelled() && inputs.enable-coverage-comment == 'true' && github.actor != 'dependabot[bot]' && github.event_name == 'pull_request'"
       with:
-        paths: ${{ steps.ff.outputs.files }}
+        paths: {{ steps.glob.outputs.paths }}
         token: ${{ github.token }}
         title: Coverage changes (${{ inputs.gradle-project-path }})
         update-comment: true
