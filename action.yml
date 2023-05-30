@@ -6,10 +6,22 @@ description: |
   Coverage details will be added as comments on pull requests.
 
 inputs:
+  download-artifact:
+    description: Download the `jacoco-build` artifact. Defaults to `true`.
+    required: true
+    default: "true"
   enable-coverage-comment:
     description: Post coverage results as a comment on the Pull Request. Defaults to `true`.
     required: true
     default: "true"
+  execution-only-caches:
+    description: |
+      Activates only the caches that are relevant for executing gradle command.
+      This is helpful when build job executes multiple gradle commands sequentially.
+      Then the caching is implemented in the very first one, and the subsequent should be marked
+      with execution-only-caches: true
+    required: false
+    default: 'false'
   gradle-properties:
     description: Content of a gradle.properties file that will be passed to the gradle runner.
     required: false
@@ -45,8 +57,22 @@ inputs:
 runs:
   using: composite
   steps:
+    - name: metadata
+      id: metadata
+      shell: bash
+      run: |
+        WORKING_DIRECTORY=${{ inputs.working-directory }}
+        GRADLE_PROJECT_PATH=${{  inputs.gradle-project-path }}
+        if [[ "$GRADLE_PROJECT_PATH" == "." ]]; then
+          ARTIFACT_PATH="$WORKING_DIRECTORY/**"
+        else
+          ARTIFACT_PATH="$WORKING_DIRECTORY/$GRADLE_PROJECT_PATH"
+        fi
+        echo "artifact-path=$ARTIFACT_PATH" >> $GITHUB_OUTPUT
+
     - name: Download jacoco build
       uses: actions/download-artifact@v3
+      if: inputs.download-artifact == 'true'
       with:
         name: jacoco-build
         path: ${{ inputs.working-directory }}/${{ inputs.gradle-project-path }}/build/jacoco/
@@ -59,6 +85,7 @@ runs:
         gradle-dependencies-cache-key: ${{ inputs.gradle-dependencies-cache-key }}
         arguments: -p ${{ inputs.gradle-project-path }} ${{ inputs.task-name }}
         properties: ${{ inputs.gradle-properties }}
+        execution-only-caches: ${{ inputs.execution-only-caches }}
 
     - name: Upload coverage report
       uses: actions/upload-artifact@v3
@@ -66,13 +93,21 @@ runs:
       with:
         name: ${{ inputs.report-name }}
         retention-days: ${{ inputs.report-retention-days }}
-        path: ${{ inputs.working-directory }}/${{ inputs.gradle-project-path }}/build/reports/jacoco/test/jacocoTestReport.xml
+        path: ${{ steps.metadata.outputs.artifact-path }}/build/reports/jacoco/test/jacocoTestReport.xml
 
-    - name: Create annotations
-      uses: equisoft-actions/jacoco-report@v1.4
+    - name: Find jacocoTestReport.xml
+      uses: tj-actions/glob@v17
+      id: glob
       if: "!cancelled() && inputs.enable-coverage-comment == 'true' && github.actor != 'dependabot[bot]' && github.event_name == 'pull_request'"
       with:
-        paths: ${{ inputs.working-directory }}/${{ inputs.gradle-project-path }}/build/reports/jacoco/test/jacocoTestReport.xml
+        separator: ","
+        files: ${{ steps.metadata.outputs.artifact-path }}/build/reports/jacoco/test/jacocoTestReport.xml
+
+    - name: Create annotations
+      uses: madrapps/jacoco-report@v1.3
+      if: "!cancelled() && inputs.enable-coverage-comment == 'true' && github.actor != 'dependabot[bot]' && github.event_name == 'pull_request'"
+      with:
+        paths: ${{ steps.glob.outputs.paths }}
         token: ${{ github.token }}
         title: Coverage changes (${{ inputs.gradle-project-path }})
         update-comment: true
