@@ -14,14 +14,6 @@ inputs:
     description: Post coverage results as a comment on the Pull Request. Defaults to `true`.
     required: true
     default: "true"
-  execution-only-caches:
-    description: |
-      Activates only the caches that are relevant for executing gradle command.
-      This is helpful when build job executes multiple gradle commands sequentially.
-      Then the caching is implemented in the very first one, and the subsequent should be marked
-      with execution-only-caches: true
-    required: false
-    default: 'false'
   gradle-properties:
     description: Content of a gradle.properties file that will be passed to the gradle runner.
     required: false
@@ -31,12 +23,10 @@ inputs:
       Defaults to the root project.
     required: true
     default: "."
-  gradle-dependencies-cache-key:
-    description: Extra files to take into account for ~/.gradle/caches dependencies
+  read-only-cache:
+    description: If set to true, the action will only read from the cache and will not write to it.
     required: true
-    default: |
-      buildSrc/**/Dependencies.kt
-      gradle/libs.versions.toml
+    default: "true"
   report-name:
     description: The name of the archived report. It must follow the convention detailed by our ADRs.
     required: true
@@ -77,15 +67,32 @@ runs:
         name: jacoco-build
         path: ${{ inputs.working-directory }}/${{ inputs.gradle-project-path }}/build/jacoco/
 
+    - name: Process gradle properties
+      id: gradle-properties
+      shell: python
+      env:
+        GRADLE_PROPERTIES: ${{ inputs.gradle-properties }}
+      run: |
+        import os
+
+        properties_list: list[str] = [line for line in (line.strip() for line in os.environ.get('GRADLE_PROPERTIES').splitlines()) if line]
+        properties = list(map(lambda x: f'-P{x}' if not x.startswith('-P') else x, properties_list))
+
+        with open(os.environ.get('GITHUB_OUTPUT'), 'a') as output_file:
+          output_file.write('gradle-properties=')
+          output_file.write(' '.join(properties))
+          output_file.write('\n')
+
     - name: Validate coverage
-      uses: burrunan/gradle-cache-action@v1
+      uses: gradle/gradle-build-action@v2
       with:
         gradle-version: wrapper
         build-root-directory: ${{ inputs.working-directory }}
-        gradle-dependencies-cache-key: ${{ inputs.gradle-dependencies-cache-key }}
-        arguments: -p ${{ inputs.gradle-project-path }} ${{ inputs.task-name }}
-        properties: ${{ inputs.gradle-properties }}
-        execution-only-caches: ${{ inputs.execution-only-caches }}
+        cache-read-only: ${{ inputs.read-only-cache }}
+        arguments: |
+          -p ${{ inputs.gradle-project-path }}
+          ${{ inputs.task-name }}
+          ${{ steps.gradle-properties.outputs.gradle-properties }}
 
     - name: Upload coverage report
       uses: actions/upload-artifact@v3
