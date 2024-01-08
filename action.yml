@@ -107,8 +107,9 @@ runs:
       id: glob
       if: "!cancelled() && inputs.enable-coverage-comment == 'true' && github.actor != 'dependabot[bot]' && github.event_name == 'pull_request'"
       with:
-        separator: ","
+        escape-paths: "false"
         files: ${{ steps.metadata.outputs.artifact-path }}/build/reports/jacoco/test/jacocoTestReport.xml
+        separator: ","
 
     - name: Create annotations
       uses: madrapps/jacoco-report@v1.6.1
