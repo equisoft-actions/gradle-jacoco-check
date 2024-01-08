@@ -61,7 +61,7 @@ runs:
         echo "artifact-path=$ARTIFACT_PATH" >> $GITHUB_OUTPUT
 
     - name: Download jacoco build
-      uses: actions/download-artifact@v4
+      uses: actions/download-artifact@v3
       if: inputs.download-artifact == 'true'
       with:
         name: jacoco-build
@@ -95,7 +95,7 @@ runs:
           ${{ steps.gradle-properties.outputs.gradle-properties }}
 
     - name: Upload coverage report
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v3
       if: "!cancelled()"
       with:
         name: ${{ inputs.report-name }}
