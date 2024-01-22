@@ -61,11 +61,12 @@ runs:
         echo "artifact-path=$ARTIFACT_PATH" >> $GITHUB_OUTPUT
 
     - name: Download jacoco build
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
       if: inputs.download-artifact == 'true'
       with:
-        name: jacoco-build
+        merge-multiple: true
         path: ${{ inputs.working-directory }}/${{ inputs.gradle-project-path }}/build/jacoco/
+        pattern: '*jacoco-build'
 
     - name: Process gradle properties
       id: gradle-properties
@@ -95,7 +96,7 @@ runs:
           ${{ steps.gradle-properties.outputs.gradle-properties }}
 
     - name: Upload coverage report
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: "!cancelled()"
       with:
         name: ${{ inputs.report-name }}
@@ -103,7 +104,7 @@ runs:
         path: ${{ steps.metadata.outputs.artifact-path }}/build/reports/jacoco/test/jacocoTestReport.xml
 
     - name: Find jacocoTestReport.xml
-      uses: tj-actions/glob@v18
+      uses: tj-actions/glob@v19
       id: glob
       if: "!cancelled() && inputs.enable-coverage-comment == 'true' && github.actor != 'dependabot[bot]' && github.event_name == 'pull_request'"
       with:
