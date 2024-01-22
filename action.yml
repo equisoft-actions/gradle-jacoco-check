@@ -64,8 +64,9 @@ runs:
       uses: actions/download-artifact@v4
       if: inputs.download-artifact == 'true'
       with:
-        name: jacoco-build
+        merge-multiple: true
         path: ${{ inputs.working-directory }}/${{ inputs.gradle-project-path }}/build/jacoco/
+        pattern: '*jacoco-build'
 
     - name: Process gradle properties
       id: gradle-properties
