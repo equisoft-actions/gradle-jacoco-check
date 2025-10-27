@@ -61,7 +61,7 @@ runs:
         echo "artifact-path=$ARTIFACT_PATH" >> $GITHUB_OUTPUT
 
     - name: Download jacoco build
-      uses: actions/download-artifact@v5
+      uses: actions/download-artifact@v6
       if: inputs.download-artifact == 'true'
       with:
         merge-multiple: true
@@ -96,7 +96,7 @@ runs:
       run: ./gradlew -p ${{ inputs.gradle-project-path }} ${{ inputs.task-name }} ${{ steps.gradle-properties.outputs.gradle-properties }}
 
     - name: Upload coverage report
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v5
       if: "!cancelled()"
       with:
         name: ${{ inputs.report-name }}
